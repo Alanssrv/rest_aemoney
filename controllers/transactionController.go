@@ -12,12 +12,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const table = "Transactions"
-
 func CreateTransaction(w http.ResponseWriter, r *http.Request) {
-	sql_cmd := fmt.Sprintf("INSERT INTO %s VALUES(?, ?, ?, ?, ?)", table)
+	sql_cmd := "InsertTransaction(?, ?, ?, ?)"
 
-	stmt, err := database.Connector.Prepare(sql_cmd)
+	stmt, err := database.Connector.Prepare("CALL " + sql_cmd)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -29,7 +27,7 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	var transaction entity.Transaction
 	json.Unmarshal(body, &transaction)
 
-	_, err = stmt.Exec(transaction.ID, transaction.Name, transaction.Value, transaction.Type, transaction.Category)
+	_, err = stmt.Exec(transaction.Name, transaction.Value, transaction.Type, transaction.Category)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -41,9 +39,9 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 
 	var transactions []entity.Transaction
 
-	sql_cmd := fmt.Sprintf("SELECT * FROM %s", table)
+	sql_cmd := "GetAllTransactions"
 
-	result, err := database.Connector.Query(sql_cmd)
+	result, err := database.Connector.Query("CALL " + sql_cmd)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -61,9 +59,9 @@ func GetTransactionByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 
-	sql_cmd := fmt.Sprintf("SELECT * FROM %s WHERE ID = ?", table)
+	sql_cmd := "GetTransactionById(?)"
 
-	result, err := database.Connector.Query(sql_cmd, params["id"])
+	result, err := database.Connector.Query("CALL "+sql_cmd, params["id"])
 	if err != nil {
 		panic(err.Error())
 	}
@@ -82,8 +80,8 @@ func GetTransactionByID(w http.ResponseWriter, r *http.Request) {
 func UpdateTransactionByID(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	sql_cmd := fmt.Sprintf("UPDATE %s SET Name = ?, Value = ?, Type = ?, Category = ? WHERE ID = ?", table)
-	stmt, err := database.Connector.Prepare(sql_cmd)
+	sql_cmd := "UpdateTransaction(?, ?, ?, ?, ?)"
+	stmt, err := database.Connector.Prepare("CALL " + sql_cmd)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -110,8 +108,8 @@ func UpdateTransactionByID(w http.ResponseWriter, r *http.Request) {
 func DeletTransactionByID(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	sql_cmd := fmt.Sprintf("DELETE FROM %s WHERE ID = ?", table)
-	stmt, err := database.Connector.Prepare(sql_cmd)
+	sql_cmd := "DeleteTransactionByID(?)"
+	stmt, err := database.Connector.Prepare("CALL " + sql_cmd)
 	if err != nil {
 		panic(err.Error())
 	}

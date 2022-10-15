@@ -59,65 +59,90 @@ func GetTransactionByID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 
-	sql_cmd := "GetTransactionById(?)"
+	var transaction = InternalGetTransactionByID(params["id"])
 
-	result, err := database.Connector.Query("CALL "+sql_cmd, params["id"])
-	if err != nil {
-		panic(err.Error())
+	if (transaction != entity.Transaction{}) {
+		json.NewEncoder(w).Encode(transaction)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w)
 	}
-
-	var transaction entity.Transaction
-	defer result.Close()
-	err = scan.Row(&transaction, result)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	json.NewEncoder(w).Encode(transaction)
 
 }
 
 func UpdateTransactionByID(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
-	sql_cmd := "UpdateTransaction(?, ?, ?, ?, ?)"
-	stmt, err := database.Connector.Prepare("CALL " + sql_cmd)
-	if err != nil {
-		panic(err.Error())
+	var baseTransaction = InternalGetTransactionByID(params["id"])
+
+	if (baseTransaction != entity.Transaction{}) {
+		sql_cmd := "UpdateTransaction(?, ?, ?, ?, ?)"
+		stmt, err := database.Connector.Prepare("CALL " + sql_cmd)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		var transaction entity.Transaction
+		json.Unmarshal(body, &transaction)
+
+		name := transaction.Name
+		value := transaction.Value
+		typec := transaction.Type
+		category := transaction.Category
+
+		_, err = stmt.Exec(name, value, typec, category, params["id"])
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w)
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		panic(err.Error())
-	}
+}
 
-	var transaction entity.Transaction
-	json.Unmarshal(body, &transaction)
+func DeleteTransactionByID(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
 
-	name := transaction.Name
-	value := transaction.Value
-	typec := transaction.Type
-	category := transaction.Category
+	var transaction = InternalGetTransactionByID(params["id"])
 
-	_, err = stmt.Exec(name, value, typec, category, params["id"])
-	if err != nil {
-		panic(err.Error())
+	if (transaction != entity.Transaction{}) {
+		sql_cmd := "DeleteTransactionByID(?)"
+		stmt, err := database.Connector.Prepare("CALL " + sql_cmd)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		_, err = stmt.Exec(params["id"])
+		if err != nil {
+			panic(err.Error())
+		}
+
+		fmt.Fprintf(w, "Post with ID = %s was deleted", params["id"])
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w)
 	}
 }
 
-func DeletTransactionByID(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
+func InternalGetTransactionByID(id string) entity.Transaction {
+	sql_cmd := "GetTransactionById(?)"
 
-	sql_cmd := "DeleteTransactionByID(?)"
-	stmt, err := database.Connector.Prepare("CALL " + sql_cmd)
+	result, err := database.Connector.Query("CALL "+sql_cmd, id)
 	if err != nil {
 		panic(err.Error())
 	}
+	defer result.Close()
 
-	_, err = stmt.Exec(params["id"])
-	if err != nil {
-		panic(err.Error())
-	}
+	var transaction entity.Transaction
+	defer result.Close()
 
-	fmt.Fprintf(w, "Post with ID = %s was deleted", params["id"])
+	_ = scan.Row(&transaction, result)
+
+	return transaction
 }

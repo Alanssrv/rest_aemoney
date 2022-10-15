@@ -25,10 +25,10 @@ func main() {
 func initDB() {
 	config :=
 		database.Config{
-			ServerName: "",
-			User:       "",
-			Password:   "",
-			DB:         "",
+			ServerName: "localhost:3306",
+			User:       "root",
+			Password:   "password",
+			DB:         "ae_money",
 		}
 
 	connectionString := database.GetConnectionString(config)
